@@ -432,12 +432,12 @@ function renderPaperStudio(data) {
 
   // 6-Card Insight Matrix
   const cards = [
-    ['🛠️ WHAT WAS DONE', 'what_was_done', 'done'],
-    ['⚙️ HOW IT WORKS', 'how_it_works', 'done'],
-    ['⚠️ LIMITATIONS', 'limitations', 'left'],
-    ['🔮 WHAT IS LEFT', 'what_is_left', 'left'],
-    ['💡 WHAT YOU CAN DO', 'what_you_can_do', 'try'],
-    ['🚀 HOW TO IMPROVE IT', 'improvement_ideas', 'improve'],
+    ['WHAT WAS DONE', 'what_was_done', 'done'],
+    ['HOW IT WORKS', 'how_it_works', 'done'],
+    ['LIMITATIONS', 'limitations', 'left'],
+    ['WHAT IS LEFT', 'what_is_left', 'left'],
+    ['WHAT YOU CAN DO', 'what_you_can_do', 'try'],
+    ['HOW TO IMPROVE IT', 'improvement_ideas', 'improve'],
   ];
   $('insight-grid').innerHTML = cards.map(([title, key, color]) => `<div class="insight-box ${color}"><h4>${title}</h4>${listMarkup(insights[key])}</div>`).join('');
   bindCitations($('insight-grid'));
@@ -506,7 +506,7 @@ function renderComparison(result) {
 
   // Also update sidebar compare-output with quick button
   $('compare-output').innerHTML = `<div class="source-card">
-    <b>✓ Comparison matrix ready for ${papers.length} papers</b>
+    <b>Comparison matrix ready for ${papers.length} papers</b>
     <button type="button" id="view-matrix-btn" style="color:var(--green);font-weight:bold;margin-top:5px;cursor:pointer;">View full comparison matrix ↗</button>
   </div>`;
   $('view-matrix-btn').onclick = () => section.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -540,8 +540,8 @@ function renderAnswer(result) {
   // Copy Answer button
   $('copy-answer-btn').onclick = () => {
     navigator.clipboard.writeText(result.answer || '').then(() => {
-      $('copy-answer-btn').textContent = 'Copied! ✓';
-      setTimeout(() => { $('copy-answer-btn').textContent = 'Copy Answer 📋'; }, 2000);
+      $('copy-answer-btn').textContent = 'Copied!';
+      setTimeout(() => { $('copy-answer-btn').textContent = 'Copy Answer'; }, 2000);
     });
   };
 }
@@ -735,8 +735,8 @@ $('close-comparison-btn').addEventListener('click', () => {
 $('copy-comparison-btn').addEventListener('click', () => {
   if (state.comparisonResult && state.comparisonResult.answer) {
     navigator.clipboard.writeText(state.comparisonResult.answer).then(() => {
-      $('copy-comparison-btn').textContent = 'Copied! ✓';
-      setTimeout(() => { $('copy-comparison-btn').textContent = 'Copy Markdown 📋'; }, 2000);
+      $('copy-comparison-btn').textContent = 'Copied!';
+      setTimeout(() => { $('copy-comparison-btn').textContent = 'Copy Markdown'; }, 2000);
     });
   }
 });
