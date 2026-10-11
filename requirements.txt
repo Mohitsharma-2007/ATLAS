@@ -1,0 +1,10 @@
+fastapi==0.115.6
+httpx==0.28.1
+neo4j==5.27.0
+# 2.10.5 pins an older pydantic-core that may compile on Python 3.14 Windows.
+# This version resolves to a prebuilt pydantic-core Windows wheel.
+pydantic==2.14.0
+python-dotenv==1.0.1
+python-multipart==0.0.20
+pypdf>=5.0,<7
+uvicorn[standard]==0.34.0

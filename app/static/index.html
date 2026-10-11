@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlas Research Graph</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/studio.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Atlas Research Graph home">
+          <span class="brand-mark"><i></i><i></i><i></i></span>
+          <span>atlas<span class="brand-dot">.</span></span>
+        </a>
+        <div class="topbar-center"><span class="topbar-label">RESEARCH WORKSPACE</span><span class="topbar-divider"></span><span class="topbar-subtitle">Knowledge discovery, connected.</span></div>
+        <div class="service-pill" id="status"><span class="pulse"></span><span>Checking services</span></div>
+      </header>
+
+      <main>
+        <section class="hero-section">
+          <div class="hero-copy">
+            <p class="eyebrow">RESEARCH INTELLIGENCE / 01</p>
+            <h1>See the research<br /><em>behind the answer.</em></h1>
+            <p class="hero-lede">Atlas turns real research papers into a living knowledge graph — so you can follow ideas from authors to methods, limitations, citations, and the next paper to read.</p>
+            <div class="hero-actions">
+              <button class="button button-dark" id="start-usecase">Start with Agent Memory <span>↗</span></button>
+              <span class="action-note">A ready-to-run research use case</span>
+            </div>
+          </div>
+          <div class="usecase-card">
+            <div class="card-orbit orbit-one"></div><div class="card-orbit orbit-two"></div>
+            <div class="usecase-top"><span class="live-tag"><i></i> STARTER USE CASE</span><span class="case-number">01</span></div>
+            <p class="case-kicker">Explore a field</p>
+            <h2>Agent memory</h2>
+            <p>Compare episodic, semantic, working, and long-term memory approaches — then trace their open limitations and related solutions.</p>
+            <div class="case-chain"><span>Paper</span><b>→</b><span>Method</span><b>→</b><span>Limitation</span><b>→</b><span>Related paper</span></div>
+            <div class="case-footer"><span>OpenAlex · Neo4j</span><span class="arrow-circle">↗</span></div>
+          </div>
+        </section>
+
+        <section class="command-panel panel">
+          <div class="command-heading"><div><p class="eyebrow">DISCOVER REAL PAPERS</p><h2>What do you want to understand?</h2></div><span class="source-note"><i class="source-dot"></i> OpenAlex · no paper API key needed</span></div>
+          <form id="discover-form" class="command-form">
+            <div class="input-wrap"><span class="input-icon">⌕</span><input id="topic" name="topic" value="agent memory" placeholder="Search a topic, field, method, or question" required /></div>
+            <select id="limit" name="limit" aria-label="Number of papers"><option value="6">6 papers</option><option value="8" selected>8 papers</option><option value="12">12 papers</option></select>
+            <button class="button button-green" type="submit">Build graph <span>↗</span></button>
+          </form>
+          <div class="suggestions"><span>TRY A TOPIC</span><button type="button" data-topic="agent memory">agent memory</button><button type="button" data-topic="retrieval augmented generation">retrieval augmented generation</button><button type="button" data-topic="multi-agent systems">multi-agent systems</button><button type="button" data-topic="graph neural networks">graph neural networks</button></div>
+          <p class="message" id="discover-message"></p>
+        </section>
+
+        <section class="metric-row" id="stats"></section>
+
+        <section class="graph-layout">
+          <div class="panel graph-card">
+            <div class="panel-heading graph-heading"><div><p class="eyebrow">KNOWLEDGE GRAPH / 02</p><h2>Follow the connections</h2></div><div class="graph-tools"><select id="graph-filter" aria-label="Filter graph nodes"><option value="all">All node types</option><option value="Paper">Papers only</option><option value="Author">Authors</option><option value="Concept">Concepts</option><option value="Method">Methods</option><option value="Limitation">Limitations</option></select><button class="icon-button" id="refresh-graph" title="Refresh graph">↻</button></div></div>
+            <div class="graph-meta"><span id="graph-count">0 nodes · 0 relations</span><span class="graph-tip">Click a node to inspect · use Expand to go one hop deeper</span></div>
+            <div class="graph-stage" id="graph-stage"><svg id="graph-svg" viewBox="0 0 1000 570" role="img" aria-label="Interactive research knowledge graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#b8c7bf"></path></marker></defs><g id="graph-edges"></g><g id="graph-nodes"></g></svg><div class="graph-empty" id="graph-empty"><span class="empty-icon">⌁</span><b>Your graph is waiting</b><span>Discover papers above to map the field.</span></div></div>
+            <div class="graph-legend"><span><i class="legend-dot paper"></i>Paper</span><span><i class="legend-dot author"></i>Author</span><span><i class="legend-dot concept"></i>Concept</span><span><i class="legend-dot method"></i>Method</span><span><i class="legend-dot limitation"></i>Limitation</span><span><i class="legend-line"></i>Relationship</span></div>
+          </div>
+          <aside class="panel inspector-card" id="inspector"><div class="inspector-empty"><span class="inspector-symbol">◌</span><p class="eyebrow">NODE INSPECTOR</p><h3>Select a node</h3><p>Explore a paper, author, method, or limitation to reveal its connected evidence.</p></div></aside>
+        </section>
+
+        <section class="paper-studio panel" id="paper-studio">
+          <div class="panel-heading"><div><p class="eyebrow">PAPER STUDIO / 03</p><h2>Make a difficult paper readable</h2></div><span class="answer-badge">SUMMARY · GAPS · NEXT STEPS</span></div>
+          <div class="studio-empty" id="studio-empty"><span class="studio-icon">✦</span><b>Select a paper to open its reading guide</b><span>Atlas will explain what it did, why it matters, what is hard, what is left, and what you can try next.</span></div>
+          <div class="studio-content" id="studio-content" hidden>
+            <div class="studio-paper-head"><div><span class="type-label">SELECTED PAPER</span><h3 id="studio-title"></h3><p id="studio-meta"></p></div><div class="studio-links"><a id="studio-source" class="button button-light" target="_blank" rel="noreferrer">Open landing page ↗</a><a id="studio-pdf" class="button button-light" target="_blank" rel="noreferrer">Open PDF ↗</a></div></div>
+            <div class="paper-facts" id="studio-facts"></div>
+            <div class="studio-summary" id="studio-summary"></div>
+            <div class="evidence-panel"><div><span class="inspector-section-label">ADD VERIFIABLE EVIDENCE</span><p>Paste a methods, results, or table excerpt so comparisons can cite the exact source location. Or upload the paper into your Aura graph.</p><div class="upload-row"><input id="paper-upload" type="file" accept=".pdf,.txt,application/pdf,text/plain" /><button class="button button-light" id="upload-document" type="button">Upload paper to Aura <span>↗</span></button></div></div><form id="evidence-form"><input id="evidence-locator" placeholder="Location · e.g. page 6, Table 2" required /><textarea id="evidence-text" placeholder="Paste at least 30 characters from the paper…" required></textarea><button class="button button-light" type="submit">Attach excerpt <span>↗</span></button></form><p class="message" id="evidence-message"></p></div>
+            <div class="insight-grid" id="insight-grid"></div>
+            <div class="studio-bottom"><div class="terms-box"><span class="inspector-section-label">HARD TERMS, MADE PLAIN</span><div id="hard-terms"></div></div><div class="paper-chat"><div class="chat-heading"><div><span class="inspector-section-label">ASK THIS PAPER</span><h3>Research paper chatbot</h3></div><span class="chat-status">Graph-grounded</span></div><div class="chat-messages" id="chat-messages"></div><form id="paper-chat-form"><input id="paper-chat-question" placeholder="Explain the main limitation, or ask what I can build from this…" required /><button class="button button-green" type="submit">Ask <span>→</span></button></form><p class="message" id="paper-chat-message"></p></div></div>
+          </div>
+        </section>
+
+        <section class="lower-layout">
+          <div class="panel answer-card">
+            <div class="panel-heading"><div><p class="eyebrow">ASK ACROSS THE GRAPH / 03</p><h2>Turn connections into insight</h2></div><span class="answer-badge">CITED ANSWERS</span></div>
+            <form id="ask-form"><div class="question-wrap"><span class="quote-mark">“</span><textarea id="question" placeholder="Which approaches to agent memory have been explored, what are their limitations, and which papers discuss related solutions?" required></textarea></div><button class="button button-dark ask-button" type="submit">Synthesize from evidence <span>→</span></button></form>
+            <p class="message" id="ask-message"></p><article class="answer" id="answer"></article>
+          </div>
+          <div class="panel papers-card"><div class="panel-heading"><div><p class="eyebrow">PAPER COLLECTION</p><h2>Recently discovered</h2></div><span class="collection-count" id="collection-count">0</span></div><div class="compare-toolbar"><span>Compare up to 4 papers</span><button class="button button-light" id="compare-button" type="button">Compare selected</button></div><div class="paper-list" id="paper-list"><div class="list-empty">Your discovered papers will appear here.</div></div><div class="compare-output" id="compare-output"></div></div>
+        </section>
+      </main>
+
+      <footer><span>ATLAS RESEARCH GRAPH</span><span>Real papers · Explicit relationships · Grounded answers</span><span>Built with Neo4j</span></footer>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
