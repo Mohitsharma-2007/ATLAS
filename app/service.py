@@ -237,10 +237,30 @@ class ResearchService:
         return evidence, sources, paths
 
     @staticmethod
-    def _valid_citations(text: str, sources: list[dict]) -> bool:
-        """Reject missing/invented labels; this is structural validation, not entailment verification."""
-        labels = set(re.findall(r"\[((?:P|R)\d+(?:-E\d+)?)\]", text))
-        return bool(labels) and labels.issubset({source["citation"] for source in sources})
+    def _sanitize_citations(text: str, sources: list[dict]) -> str:
+        """Sanitize citation tags to match loaded sources without discarding valid model responses."""
+        if not text:
+            return ""
+        allowed = {s["citation"] for s in sources if isinstance(s, dict) and "citation" in s}
+        if not allowed:
+            return text
+        found = set(re.findall(r"\[((?:P|R)\d+(?:-E\d+)?)\]", text))
+        invalid = found - allowed
+        if invalid:
+            # Remove or clean tags that do not belong to the allowed sources
+            return re.sub(
+                r"\[((?:P|R)\d+(?:-E\d+)?)\]",
+                lambda m: m.group(0) if m.group(1) in allowed else "",
+                text,
+            )
+        return text
+
+    async def list_papers(self, limit: int = 50) -> list[dict[str, Any]]:
+        if not self.graph.connected:
+            return []
+        records = await self.graph.all_papers()
+        papers = [paper_from_record(record) for record in records[:limit]]
+        return [paper.as_source() for paper in papers]
 
     async def paper_insights(self, openalex_id: str) -> dict[str, Any]:
         if not self.graph.connected:
@@ -254,10 +274,8 @@ class ResearchService:
         if cache_key in self.insight_cache:
             return self.insight_cache[cache_key]
         insights = await self.llm.analyze_paper(paper, evidence)
-        if insights and not self._valid_citations(str(insights), sources):
-            insights = None
-        used_llm = bool(insights)
-        if not insights:
+        used_llm = bool(insights and insights.get("summary"))
+        if not insights or not insights.get("summary"):
             insights = self._fallback_insights(paper)
         result = {
             "paper": paper.as_source(),
@@ -286,8 +304,8 @@ class ResearchService:
         paper = paper_from_record(record)
         evidence, sources, paths = await self._paper_context(record)
         response = await self.llm.paper_chat(question, evidence, history)
-        if response and not self._valid_citations(response, sources):
-            response = None
+        if response:
+            response = self._sanitize_citations(response, sources)
         used_llm = bool(response)
         if not response:
             response = self._fallback_paper_chat(paper, question)
@@ -345,15 +363,20 @@ class ResearchService:
         evidence = "\n\n".join(context for context, _ in contexts)
         sources = [source for _, items in contexts for source in items]
         prompt = (
-            f"{question}\n\nCompare the papers explicitly. Use a clear per-paper structure and a comparison summary. "
-            "Include a comparison table with approach, dataset, split, metric, reported result, limitations "
-            "and citation. Use 'not reported in available evidence' for missing cells. "
-            "Do not rank results from different datasets or evaluation setups. Clearly label proposed "
-            "improvements as hypotheses, not author findings. Cite every claim with [P1], [P2], [P1-E1], etc."
+            f"{question}\n\n"
+            "Provide a systematic, executive research comparison in rich GitHub-flavored Markdown. "
+            "Follow this exact structure:\n"
+            "1. Executive Summary & Core Comparison Takeaway\n"
+            "2. Detailed Comparison Table (Aspect | Paper 1 [P1] | Paper 2 [P2] | ... | Key Differentiator)\n"
+            "   Include rows for: Core Problem, Architecture & Approach, Memory Mechanism/Type, Benchmarks/Datasets, Primary Metrics & Outcomes, Key Limitations, Citations.\n"
+            "3. Per-Paper Technical Deep-Dive (Methodology, Highlights, Weaknesses)\n"
+            "4. Architectural & Algorithmic Trade-offs\n"
+            "5. Open Research Gaps & Suggested Next Steps (clearly labeled as hypotheses/proposals)\n"
+            "Cite every substantive claim with [P1], [P2], [P1-E1], etc."
         )
         response = await self.llm.synthesize(prompt, evidence) if self.llm.available else None
-        if response and not self._valid_citations(response, sources):
-            response = None
+        if response:
+            response = self._sanitize_citations(response, sources)
         used_llm = bool(response)
         if not response:
             response = self._fallback_comparison(papers)

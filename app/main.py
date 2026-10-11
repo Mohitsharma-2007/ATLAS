@@ -74,6 +74,11 @@ async def graph_overview(limit: int = 24) -> dict:
     return await graph.graph_overview(limit)
 
 
+@app.get("/api/papers")
+async def list_papers(limit: int = 50) -> list[dict]:
+    return await service.list_papers(limit)
+
+
 @app.get("/api/graph/expand")
 async def expand_graph_node(node_id: str) -> dict:
     return await graph.expand_node(node_id)

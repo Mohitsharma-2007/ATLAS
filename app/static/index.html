@@ -64,25 +64,163 @@
         </section>
 
         <section class="paper-studio panel" id="paper-studio">
-          <div class="panel-heading"><div><p class="eyebrow">PAPER STUDIO / 03</p><h2>Make a difficult paper readable</h2></div><span class="answer-badge">SUMMARY · GAPS · NEXT STEPS</span></div>
+          <div class="panel-heading studio-heading">
+            <div>
+              <p class="eyebrow">PAPER STUDIO / 03</p>
+              <h2>Make a difficult paper readable</h2>
+            </div>
+            <div class="studio-top-controls">
+              <div class="studio-switcher-wrap">
+                <span class="switcher-label">ACTIVE PAPER:</span>
+                <select id="studio-paper-select" aria-label="Select paper for studio">
+                  <option value="">Select a paper to inspect…</option>
+                </select>
+              </div>
+              <span class="answer-badge" id="studio-mode-badge">AI READING GUIDE</span>
+            </div>
+          </div>
           <div class="studio-empty" id="studio-empty"><span class="studio-icon">✦</span><b>Select a paper to open its reading guide</b><span>Atlas will explain what it did, why it matters, what is hard, what is left, and what you can try next.</span></div>
           <div class="studio-content" id="studio-content" hidden>
-            <div class="studio-paper-head"><div><span class="type-label">SELECTED PAPER</span><h3 id="studio-title"></h3><p id="studio-meta"></p></div><div class="studio-links"><a id="studio-source" class="button button-light" target="_blank" rel="noreferrer">Open landing page ↗</a><a id="studio-pdf" class="button button-light" target="_blank" rel="noreferrer">Open PDF ↗</a></div></div>
+            <div class="studio-paper-head">
+              <div>
+                <span class="type-label">SELECTED PAPER</span>
+                <h3 id="studio-title"></h3>
+                <p id="studio-meta"></p>
+              </div>
+              <div class="studio-links">
+                <a id="studio-source" class="button button-light" target="_blank" rel="noreferrer">Open landing page ↗</a>
+                <a id="studio-pdf" class="button button-light" target="_blank" rel="noreferrer">Open PDF ↗</a>
+                <button id="studio-trace-graph" class="button button-dark" type="button">Trace in graph ⌁</button>
+              </div>
+            </div>
             <div class="paper-facts" id="studio-facts"></div>
-            <div class="studio-summary" id="studio-summary"></div>
-            <div class="evidence-panel"><div><span class="inspector-section-label">ADD VERIFIABLE EVIDENCE</span><p>Paste a methods, results, or table excerpt so comparisons can cite the exact source location. Or upload the paper into your Aura graph.</p><div class="upload-row"><input id="paper-upload" type="file" accept=".pdf,.txt,application/pdf,text/plain" /><button class="button button-light" id="upload-document" type="button">Upload paper to Aura <span>↗</span></button></div></div><form id="evidence-form"><input id="evidence-locator" placeholder="Location · e.g. page 6, Table 2" required /><textarea id="evidence-text" placeholder="Paste at least 30 characters from the paper…" required></textarea><button class="button button-light" type="submit">Attach excerpt <span>↗</span></button></form><p class="message" id="evidence-message"></p></div>
+            
+            <div class="studio-summary-cards" id="studio-summary-cards">
+              <div class="summary-card plain-english">
+                <div class="card-header"><span class="card-icon">📖</span><b>IN PLAIN ENGLISH</b></div>
+                <div class="card-body" id="studio-summary-text"></div>
+              </div>
+              <div class="summary-card core-problem">
+                <div class="card-header"><span class="card-icon">🎯</span><b>THE CORE PROBLEM</b></div>
+                <div class="card-body" id="studio-problem-text"></div>
+              </div>
+              <div class="summary-card why-matters">
+                <div class="card-header"><span class="card-icon">💎</span><b>WHY IT MATTERS</b></div>
+                <div class="card-body" id="studio-why-matters-text"></div>
+              </div>
+            </div>
+
+            <div class="evidence-panel">
+              <div>
+                <span class="inspector-section-label">ADD VERIFIABLE EVIDENCE</span>
+                <p>Paste a methods, results, or table excerpt so comparisons can cite the exact source location. Or upload the paper into your Aura graph.</p>
+                <div class="upload-row">
+                  <input id="paper-upload" type="file" accept=".pdf,.txt,application/pdf,text/plain" />
+                  <button class="button button-light" id="upload-document" type="button">Upload paper to Aura <span>↗</span></button>
+                </div>
+              </div>
+              <form id="evidence-form">
+                <input id="evidence-locator" placeholder="Location · e.g. page 6, Table 2" required />
+                <textarea id="evidence-text" placeholder="Paste at least 30 characters from the paper…" required></textarea>
+                <button class="button button-light" type="submit">Attach excerpt <span>↗</span></button>
+              </form>
+              <p class="message" id="evidence-message"></p>
+            </div>
+
             <div class="insight-grid" id="insight-grid"></div>
-            <div class="studio-bottom"><div class="terms-box"><span class="inspector-section-label">HARD TERMS, MADE PLAIN</span><div id="hard-terms"></div></div><div class="paper-chat"><div class="chat-heading"><div><span class="inspector-section-label">ASK THIS PAPER</span><h3>Research paper chatbot</h3></div><span class="chat-status">Graph-grounded</span></div><div class="chat-messages" id="chat-messages"></div><form id="paper-chat-form"><input id="paper-chat-question" placeholder="Explain the main limitation, or ask what I can build from this…" required /><button class="button button-green" type="submit">Ask <span>→</span></button></form><p class="message" id="paper-chat-message"></p></div></div>
+
+            <div class="studio-bottom">
+              <div class="terms-box">
+                <div class="box-head">
+                  <span class="inspector-section-label">HARD TERMS, MADE PLAIN</span>
+                  <span class="term-count-badge" id="term-count-badge">Glossary</span>
+                </div>
+                <div id="hard-terms"></div>
+              </div>
+              <div class="paper-chat">
+                <div class="chat-heading">
+                  <div>
+                    <span class="inspector-section-label">ASK THIS PAPER</span>
+                    <h3>Research paper chatbot</h3>
+                  </div>
+                  <span class="chat-status">Graph-grounded</span>
+                </div>
+                <div class="chat-prompt-pills">
+                  <span>QUICK PROMPTS:</span>
+                  <button type="button" class="prompt-pill" data-prompt="What are the primary limitations and constraints?">⚠️ Limitations</button>
+                  <button type="button" class="prompt-pill" data-prompt="Explain the technical architecture step-by-step.">⚙️ Architecture</button>
+                  <button type="button" class="prompt-pill" data-prompt="What datasets and baselines were used in evaluation?">📊 Evaluation</button>
+                  <button type="button" class="prompt-pill" data-prompt="How can I improve or extend this approach?">🚀 Improvements</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <form id="paper-chat-form">
+                  <input id="paper-chat-question" placeholder="Explain the main limitation, or ask what I can build from this…" required />
+                  <button class="button button-green" type="submit">Ask <span>→</span></button>
+                </form>
+                <p class="message" id="paper-chat-message"></p>
+              </div>
+            </div>
           </div>
+        </section>
+
+        <section class="panel comparison-section" id="comparison-section" hidden>
+          <div class="panel-heading comparison-heading">
+            <div>
+              <p class="eyebrow">CROSS-PAPER SYNTHESIS / COMPARISON MATRIX</p>
+              <h2>Systematic Research Comparison</h2>
+            </div>
+            <div class="comparison-actions">
+              <button class="button button-light" id="copy-comparison-btn" type="button">Copy Markdown 📋</button>
+              <button class="icon-button" id="close-comparison-btn" title="Close comparison view">✕</button>
+            </div>
+          </div>
+          <div class="comparison-papers-row" id="comparison-papers-row"></div>
+          <div class="comparison-markdown-view" id="comparison-markdown-view"></div>
         </section>
 
         <section class="lower-layout">
           <div class="panel answer-card">
-            <div class="panel-heading"><div><p class="eyebrow">ASK ACROSS THE GRAPH / 03</p><h2>Turn connections into insight</h2></div><span class="answer-badge">CITED ANSWERS</span></div>
-            <form id="ask-form"><div class="question-wrap"><span class="quote-mark">“</span><textarea id="question" placeholder="Which approaches to agent memory have been explored, what are their limitations, and which papers discuss related solutions?" required></textarea></div><button class="button button-dark ask-button" type="submit">Synthesize from evidence <span>→</span></button></form>
-            <p class="message" id="ask-message"></p><article class="answer" id="answer"></article>
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">ASK ACROSS THE GRAPH / 03</p>
+                <h2>Turn connections into insight</h2>
+              </div>
+              <span class="answer-badge">CITED ANSWERS</span>
+            </div>
+            <form id="ask-form">
+              <div class="question-wrap">
+                <span class="quote-mark">“</span>
+                <textarea id="question" placeholder="Which approaches to agent memory have been explored, what are their limitations, and which papers discuss related solutions?" required></textarea>
+              </div>
+              <button class="button button-dark ask-button" type="submit">Synthesize from evidence <span>→</span></button>
+            </form>
+            <p class="message" id="ask-message"></p>
+            <div class="answer-toolbar" id="answer-toolbar" hidden>
+              <span class="answer-meta-tag" id="answer-meta-tag"><i class="pulse"></i> Grounded Synthesis</span>
+              <button class="button button-light button-tiny" id="copy-answer-btn" type="button">Copy Answer 📋</button>
+            </div>
+            <article class="answer" id="answer"></article>
           </div>
-          <div class="panel papers-card"><div class="panel-heading"><div><p class="eyebrow">PAPER COLLECTION</p><h2>Recently discovered</h2></div><span class="collection-count" id="collection-count">0</span></div><div class="compare-toolbar"><span>Compare up to 4 papers</span><button class="button button-light" id="compare-button" type="button">Compare selected</button></div><div class="paper-list" id="paper-list"><div class="list-empty">Your discovered papers will appear here.</div></div><div class="compare-output" id="compare-output"></div></div>
+          <div class="panel papers-card">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">PAPER COLLECTION</p>
+                <h2>Recently discovered</h2>
+              </div>
+              <span class="collection-count" id="collection-count">0</span>
+            </div>
+            <div class="compare-toolbar">
+              <span id="compare-selection-count">0 of 4 papers selected</span>
+              <div class="compare-btn-group">
+                <button class="button button-light button-tiny" id="select-top-two" type="button">Select Top 2</button>
+                <button class="button button-green button-tiny" id="compare-button" type="button" disabled>Compare Selected <span>↗</span></button>
+              </div>
+            </div>
+            <div class="paper-list" id="paper-list">
+              <div class="list-empty">Your discovered papers will appear here.</div>
+            </div>
+            <div class="compare-output" id="compare-output"></div>
+          </div>
         </section>
       </main>
 
