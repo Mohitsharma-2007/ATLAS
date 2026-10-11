@@ -103,6 +103,14 @@
 .comparison-paper-chip .cite-tag { display: inline-block; background: var(--green); color: white; border-radius: 4px; padding: 2px 7px; font: 700 9px 'DM Mono', monospace; margin-bottom: 6px; }
 .comparison-paper-chip h4 { font-size: 13px; font-weight: 700; margin: 0 0 5px; color: var(--ink); line-height: 1.35; letter-spacing: -.02em; }
 .comparison-paper-chip p { font-size: 10px; color: var(--muted); margin: 0; }
+
+/* Comparison Summary Metrics Banner */
+.comparison-summary-banner { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 14px 0 20px; padding: 14px 18px; background: #f6faf5; border: 1px solid #d4e5d6; border-radius: 8px; }
+.comp-stat-card { display: flex; flex-direction: column; gap: 3px; }
+.comp-stat-num { font-size: 20px; font-weight: 800; color: var(--green-deep); letter-spacing: -.04em; line-height: 1.1; }
+.comp-stat-lbl { font: 700 9px 'DM Mono', monospace; color: var(--soft-muted); text-transform: uppercase; letter-spacing: .05em; }
+.comp-stat-highlight .comp-stat-num { color: var(--green); font-size: 17px; }
+
 .comparison-markdown-view { font-size: 13px; line-height: 1.75; color: #2e3e35; margin-top: 14px; }
 
 /* Markdown & Presentation Styles for AI Output */

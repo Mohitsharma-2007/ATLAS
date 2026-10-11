@@ -247,11 +247,160 @@ function relationSummary(nodeId) {
   return summaries.join('') || '<div class="relation-item"><span>No connected nodes loaded yet.</span></div>';
 }
 
-function renderInspector(node) {
-  if (!node) {
-    $('inspector').innerHTML = '<div class="inspector-empty"><span class="inspector-symbol">◌</span><p class="eyebrow">NODE INSPECTOR</p><h3>Select a node</h3><p>Explore a paper, author, method, or limitation to reveal its connected evidence.</p></div>';
+const LOCAL_STORAGE_HISTORY_KEY = 'atlas_search_history';
+
+function getSearchHistory() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveSearchHistory(topic, papers, stats = null) {
+  if (!topic || !String(topic).trim()) return;
+  const cleanTopic = String(topic).trim();
+  try {
+    const history = getSearchHistory().filter(
+      (item) => item.topic.toLowerCase() !== cleanTopic.toLowerCase()
+    );
+    const entry = {
+      topic: cleanTopic,
+      timestamp: Date.now(),
+      dateStr: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      count: Array.isArray(papers) ? papers.length : 0,
+      papers: Array.isArray(papers) ? papers : [],
+      stats: stats || null,
+    };
+    history.unshift(entry);
+    const capped = history.slice(0, 10);
+    localStorage.setItem(LOCAL_STORAGE_HISTORY_KEY, JSON.stringify(capped));
+    renderSearchHistory();
+  } catch (err) {
+    console.warn('Could not save to localStorage:', err);
+  }
+}
+
+function renderSearchHistory() {
+  const container = $('saved-topics-chips');
+  const clearBtn = $('clear-history-btn');
+  if (!container) return;
+  const history = getSearchHistory();
+
+  if (!history.length) {
+    container.innerHTML = '<span class="history-empty">No previous topics saved in localhost yet. Discover topics to save sessions.</span>';
+    if (clearBtn) clearBtn.style.display = 'none';
     return;
   }
+
+  if (clearBtn) clearBtn.style.display = 'inline-block';
+  container.innerHTML = history.map((item, idx) => {
+    const isCurrent = $('topic') && $('topic').value.toLowerCase().trim() === item.topic.toLowerCase().trim();
+    return `<button type="button" class="saved-topic-chip${isCurrent ? ' active-topic' : ''}" data-history-idx="${idx}" title="Open saved search: ${escapeHtml(item.topic)} (${item.count} papers · ${item.dateStr || ''})">
+      <span class="chip-dot"></span>
+      <span class="chip-name">${escapeHtml(item.topic)}</span>
+      <span class="chip-count">${item.count}p</span>
+    </button>`;
+  }).join('');
+
+  container.querySelectorAll('.saved-topic-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const idx = Number(chip.dataset.historyIdx);
+      const item = history[idx];
+      if (!item) return;
+      restoreSearchSession(item);
+    });
+  });
+}
+
+function restoreSearchSession(item) {
+  $('topic').value = item.topic;
+  $('question').value = `Which approaches to ${item.topic} have been explored, what are their limitations, and which papers discuss related solutions?`;
+
+  if (Array.isArray(item.papers) && item.papers.length > 0) {
+    renderPapers(item.papers);
+    focusPaper(item.papers[0].openalex_id);
+    setMessage('discover-message', `Restored "${item.topic}" from local storage (${item.papers.length} papers saved locally).`);
+  } else {
+    setMessage('discover-message', `Selected saved topic "${item.topic}". Click "Build graph" to discover fresh papers.`);
+  }
+
+  renderSearchHistory();
+  $('discover-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderInspectorDefault() {
+  const quickList = $('inspector-quick-list');
+  if (!quickList) return;
+
+  if (!state.papers || !state.papers.length) {
+    quickList.innerHTML = '<div class="inspector-quick-empty">No papers loaded in graph yet. Enter a topic above to discover papers and explore entities.</div>';
+    return;
+  }
+
+  quickList.innerHTML = state.papers.map((paper, idx) => {
+    const isSelected = state.selectedPaperId === paper.openalex_id;
+    return `<div class="inspector-hub-card${isSelected ? ' active' : ''}" data-hub-paper="${escapeHtml(paper.openalex_id)}">
+      <div class="hub-card-top">
+        <span class="hub-paper-idx">#${idx + 1}</span>
+        <span class="hub-paper-meta">${paper.year || 'Year ?'} · ${paper.cited_by_count || 0} cites</span>
+      </div>
+      <h4 class="hub-paper-title">${escapeHtml(paper.title)}</h4>
+      <p class="hub-paper-authors">${escapeHtml((paper.authors || []).slice(0, 2).join(', ') || 'Authors not listed')}</p>
+      <div class="hub-card-actions">
+        <button type="button" class="hub-action-btn view-graph-btn" data-hub-trace="${escapeHtml(paper.openalex_id)}">View in graph ↗</button>
+        <button type="button" class="hub-action-btn open-studio-btn" data-hub-studio="${escapeHtml(paper.openalex_id)}">Open Studio ✦</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  quickList.querySelectorAll('[data-hub-trace]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const openalexId = btn.dataset.hubTrace;
+      const node = state.graph.nodes.find((n) => n.external_id === openalexId);
+      if (node) {
+        selectNode(node.id);
+        $('graph-stage').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  });
+
+  quickList.querySelectorAll('[data-hub-studio]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const openalexId = btn.dataset.hubStudio;
+      openPaperWorkspace(openalexId);
+    });
+  });
+
+  quickList.querySelectorAll('.inspector-hub-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const openalexId = card.dataset.hubPaper;
+      focusPaper(openalexId);
+    });
+  });
+}
+
+function renderInspector(node) {
+  const defaultView = $('inspector-default');
+  const contentView = $('inspector-content');
+
+  if (!node) {
+    if (defaultView) defaultView.hidden = false;
+    if (contentView) {
+      contentView.hidden = true;
+      contentView.innerHTML = '';
+    }
+    renderInspectorDefault();
+    return;
+  }
+
+  if (defaultView) defaultView.hidden = true;
+  if (!contentView) return;
+  contentView.hidden = false;
+
   const props = node.properties || {};
   const type = node.type || 'Entity';
   const paper = type === 'Paper';
@@ -261,13 +410,28 @@ function renderInspector(node) {
   if (props.cited_by_count !== undefined) chips.push(`${props.cited_by_count} citations`);
   if (props.openalex_id) chips.push(props.openalex_id);
   const url = safeUrl(props.url || props.doi);
-  $('inspector').innerHTML = `<div class="inspector-top"><div><span class="type-label">${escapeHtml(type.toUpperCase())}</span><h2 class="inspector-title">${escapeHtml(title)}</h2></div><span class="node-key">${escapeHtml(node.id.split(':').pop())}</span></div>
+
+  contentView.innerHTML = `
+    <button type="button" class="inspector-back-btn" id="inspector-back">← Back to Paper Navigator</button>
+    <div class="inspector-top">
+      <div>
+        <span class="type-label">${escapeHtml(type.toUpperCase())}</span>
+        <h2 class="inspector-title">${escapeHtml(title)}</h2>
+      </div>
+      <span class="node-key">${escapeHtml(node.id.split(':').pop())}</span>
+    </div>
     <div class="inspector-props">${chips.map((chip) => `<span class="prop-chip">${escapeHtml(chip)}</span>`).join('')}</div>
     <button class="expand-button" id="expand-node">Expand connected evidence <span>↗</span></button>
     ${paper && props.openalex_id ? '<button class="expand-button studio-button" id="open-paper">Open paper studio <span>✦</span></button>' : ''}
     ${url ? `<a class="inspector-link" href="${url}" target="_blank" rel="noreferrer">Open source paper ↗</a>` : ''}
     ${paper && props.abstract ? `<div class="inspector-rule"></div><span class="inspector-section-label">ABSTRACT</span><p class="inspector-abstract">${escapeHtml(props.abstract)}</p>` : ''}
     <div class="inspector-rule"></div><span class="inspector-section-label">LOADED RELATIONSHIPS</span><div class="relation-list">${relationSummary(node.id)}</div>`;
+
+  $('inspector-back').addEventListener('click', () => {
+    state.selected = null;
+    renderGraph();
+    renderInspector(null);
+  });
   $('expand-node').addEventListener('click', () => expandNode(node.id));
   if (paper && props.openalex_id) $('open-paper').addEventListener('click', () => openPaperWorkspace(props.openalex_id));
 }
@@ -313,13 +477,23 @@ function updateCompareToolbar() {
   $('compare-button').disabled = count < 2;
 }
 
-function renderPapers(papers) {
-  state.papers = papers || [];
-  $('collection-count').textContent = state.papers.length;
-  updateStudioSelect();
-  updateCompareToolbar();
+function filterPaperItems(query) {
+  const list = $('paper-list');
+  if (!list) return;
+  const q = String(query || '').toLowerCase().trim();
+  const filtered = q
+    ? state.papers.filter((p) => {
+        const title = (p.title || '').toLowerCase();
+        const authors = (p.authors || []).join(' ').toLowerCase();
+        const abstract = (p.abstract || '').toLowerCase();
+        const keywords = (p.keywords || []).join(' ').toLowerCase();
+        return title.includes(q) || authors.includes(q) || abstract.includes(q) || keywords.includes(q);
+      })
+    : state.papers;
 
-  $('paper-list').innerHTML = state.papers.length ? state.papers.map((paper) => {
+  $('collection-count').textContent = q ? `${filtered.length} of ${state.papers.length}` : state.papers.length;
+
+  list.innerHTML = filtered.length ? filtered.map((paper) => {
     const url = safeUrl(paper.url);
     const pdf = safeUrl(paper.pdf_url);
     const isActive = state.selectedPaperId === paper.openalex_id ? ' active-paper' : '';
@@ -339,16 +513,16 @@ function renderPapers(papers) {
       </div>
       <button class="trace-button" data-trace-id="${escapeHtml(paper.openalex_id)}" title="Show this paper in the graph" onclick="event.stopPropagation()">↗</button>
     </article>`;
-  }).join('') : '<div class="list-empty">Your discovered papers will appear here.</div>';
+  }).join('') : '<div class="list-empty">No papers match your filter search.</div>';
 
-  document.querySelectorAll('.paper-item').forEach((item) => {
+  list.querySelectorAll('.paper-item').forEach((item) => {
     item.addEventListener('click', () => {
       const openalexId = item.dataset.paperId;
       if (openalexId) focusPaper(openalexId);
     });
   });
 
-  document.querySelectorAll('[data-trace-id]').forEach((button) => {
+  list.querySelectorAll('[data-trace-id]').forEach((button) => {
     button.addEventListener('click', () => {
       const id = button.dataset.traceId;
       const node = state.graph.nodes.find((n) => n.external_id === id);
@@ -359,7 +533,7 @@ function renderPapers(papers) {
     });
   });
 
-  document.querySelectorAll('.compare-check').forEach((checkbox) => {
+  list.querySelectorAll('.compare-check').forEach((checkbox) => {
     checkbox.addEventListener('change', () => {
       const checked = document.querySelectorAll('.compare-check:checked');
       if (checked.length > 4) {
@@ -369,6 +543,16 @@ function renderPapers(papers) {
       updateCompareToolbar();
     });
   });
+}
+
+function renderPapers(papers) {
+  state.papers = papers || [];
+  const filterInput = $('paper-filter-input');
+  if (filterInput) filterInput.value = '';
+  filterPaperItems('');
+  updateStudioSelect();
+  updateCompareToolbar();
+  if (!state.selected) renderInspectorDefault();
 }
 
 function focusPaper(openalexId) {
@@ -453,6 +637,7 @@ function renderPaperStudio(data) {
   document.querySelectorAll('.paper-item').forEach((it) => {
     it.classList.toggle('active-paper', it.dataset.paperId === paper.openalex_id);
   });
+  renderInspectorDefault();
 }
 
 async function openPaperWorkspace(openalexId) {
@@ -490,6 +675,7 @@ function renderComparison(result) {
   const section = $('comparison-section');
   section.hidden = false;
 
+  // Render Paper Chips
   $('comparison-papers-row').innerHTML = papers.map((p) => {
     const pdf = safeUrl(p.pdf_url);
     const url = safeUrl(p.url || p.doi);
@@ -501,13 +687,48 @@ function renderComparison(result) {
     </div>`;
   }).join('');
 
+  // Render Metric Summary Banner
+  const totalPapers = papers.length;
+  const years = papers.map((p) => Number(p.year)).filter((y) => !isNaN(y) && y > 1900);
+  const minYear = years.length ? Math.min(...years) : '—';
+  const maxYear = years.length ? Math.max(...years) : '—';
+  const yearSpan = minYear === maxYear ? String(minYear) : `${minYear} – ${maxYear}`;
+  const totalCitations = papers.reduce((acc, p) => acc + (Number(p.cited_by_count) || 0), 0);
+  const avgCitations = totalPapers ? Math.round(totalCitations / totalPapers) : 0;
+
+  const banner = $('comparison-summary-banner');
+  if (banner) {
+    banner.innerHTML = `
+      <div class="comp-stat-card">
+        <span class="comp-stat-num">${totalPapers}</span>
+        <span class="comp-stat-lbl">Papers Compared</span>
+      </div>
+      <div class="comp-stat-card">
+        <span class="comp-stat-num">${yearSpan}</span>
+        <span class="comp-stat-lbl">Publication Span</span>
+      </div>
+      <div class="comp-stat-card">
+        <span class="comp-stat-num">${totalCitations.toLocaleString()}</span>
+        <span class="comp-stat-lbl">Aggregate Citations</span>
+      </div>
+      <div class="comp-stat-card">
+        <span class="comp-stat-num">${avgCitations}</span>
+        <span class="comp-stat-lbl">Avg Impact / Paper</span>
+      </div>
+      <div class="comp-stat-card comp-stat-highlight">
+        <span class="comp-stat-num">Full Study</span>
+        <span class="comp-stat-lbl">Deep Architectural Synthesis</span>
+      </div>
+    `;
+  }
+
   $('comparison-markdown-view').innerHTML = `<div class="ai-formatted-content">${formatAiMarkdown(result.answer || '', papers)}</div>`;
   bindCitations($('comparison-markdown-view'));
 
-  // Also update sidebar compare-output with quick button
+  // Update sidebar compare-output with quick button
   $('compare-output').innerHTML = `<div class="source-card">
     <b>Comparison matrix ready for ${papers.length} papers</b>
-    <button type="button" id="view-matrix-btn" style="color:var(--green);font-weight:bold;margin-top:5px;cursor:pointer;">View full comparison matrix ↗</button>
+    <button type="button" id="view-matrix-btn" style="color:var(--green);font-weight:bold;margin-top:5px;cursor:pointer;">View full comparison study ↗</button>
   </div>`;
   $('view-matrix-btn').onclick = () => section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -563,6 +784,14 @@ async function loadState() {
     renderPapers(papers);
     await loadGraph();
 
+    // Initialize search history from local storage
+    renderSearchHistory();
+    const history = getSearchHistory();
+    if (!history.length && papers && papers.length > 0) {
+      // Auto-save existing papers session under 'agent memory' so user can see it right away
+      saveSearchHistory('agent memory', papers, stats);
+    }
+
     // If papers exist in DB, automatically load the first one into Paper Studio!
     if (papers && papers.length > 0 && !state.selectedPaperId) {
       openPaperWorkspace(papers[0].openalex_id);
@@ -571,6 +800,7 @@ async function loadState() {
     $('status').innerHTML = '<span class="pulse"></span><span>Service unavailable</span>';
     $('status').classList.add('warn');
     renderGraph();
+    renderSearchHistory();
   }
 }
 
@@ -579,17 +809,21 @@ $('discover-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = event.target.querySelector('button[type="submit"]');
   button.disabled = true;
+  const topicVal = $('topic').value.trim();
   setMessage('discover-message', 'Searching OpenAlex, extracting research entities, and mapping the graph…');
   try {
-    const result = await request('/api/discover', { method: 'POST', body: JSON.stringify({ topic: $('topic').value, limit: Number($('limit').value) }) });
+    const result = await request('/api/discover', { method: 'POST', body: JSON.stringify({ topic: topicVal, limit: Number($('limit').value) }) });
     renderPapers(result.papers);
     renderStats(result.stats);
+    // Save to local storage
+    saveSearchHistory(topicVal, result.papers, result.stats);
+
     if (result.stored) {
       await loadGraph(true);
       if (result.papers && result.papers[0]) openPaperWorkspace(result.papers[0].openalex_id);
-      setMessage('discover-message', `${result.count} real papers are connected in Neo4j. Select a node or paper to explore.`);
+      setMessage('discover-message', `${result.count} real papers connected in Neo4j and saved locally. Select a node or paper to explore.`);
     } else {
-      setMessage('discover-message', `${result.count} real OpenAlex papers loaded for preview. Neo4j storage is waiting: ${result.storage_message}`, true);
+      setMessage('discover-message', `${result.count} real OpenAlex papers loaded for preview and saved locally. Neo4j storage is waiting: ${result.storage_message}`, true);
     }
   } catch (error) { setMessage('discover-message', error.message, true); }
   button.disabled = false;
@@ -620,6 +854,33 @@ $('start-usecase').addEventListener('click', () => {
   $('topic').value = 'agent memory';
   $('question').value = 'Which approaches to agent memory have been explored, what are their limitations, and which papers discuss related solutions?';
   $('discover-form').requestSubmit();
+});
+
+// Clear history button
+const clearHistBtn = $('clear-history-btn');
+if (clearHistBtn) {
+  clearHistBtn.addEventListener('click', () => {
+    localStorage.removeItem(LOCAL_STORAGE_HISTORY_KEY);
+    renderSearchHistory();
+    setMessage('discover-message', 'Saved search history cleared from local storage.');
+  });
+}
+
+// Paper live filter
+const paperFilterInput = $('paper-filter-input');
+if (paperFilterInput) {
+  paperFilterInput.addEventListener('input', (e) => {
+    filterPaperItems(e.target.value);
+  });
+}
+
+// Research Prompt Pills (Question templates)
+document.querySelectorAll('.template-pill').forEach((pill) => {
+  pill.addEventListener('click', () => {
+    $('question').value = pill.dataset.prompt;
+    $('question').focus();
+    $('ask-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 });
 
 $('graph-filter').addEventListener('change', renderGraph);

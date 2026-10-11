@@ -28,6 +28,15 @@
               <button class="button button-dark" id="start-usecase">Start with Agent Memory <span>↗</span></button>
               <span class="action-note">A ready-to-run research use case</span>
             </div>
+            <div class="system-capabilities-strip">
+              <span><b>NEO4J AURA</b> Graph Storage</span>
+              <span class="strip-divider">·</span>
+              <span><b>OPENALEX</b> Keyless Discovery</span>
+              <span class="strip-divider">·</span>
+              <span><b>384D</b> Vector Embeddings</span>
+              <span class="strip-divider">·</span>
+              <span><b>MULTI-HOP</b> Relationship Paths</span>
+            </div>
           </div>
           <div class="usecase-card">
             <div class="card-orbit orbit-one"></div><div class="card-orbit orbit-two"></div>
@@ -41,13 +50,39 @@
         </section>
 
         <section class="command-panel panel">
-          <div class="command-heading"><div><p class="eyebrow">DISCOVER REAL PAPERS</p><h2>What do you want to understand?</h2></div><span class="source-note"><i class="source-dot"></i> OpenAlex · no paper API key needed</span></div>
+          <div class="command-heading">
+            <div>
+              <p class="eyebrow">DISCOVER REAL PAPERS</p>
+              <h2>What do you want to understand?</h2>
+            </div>
+            <span class="source-note"><i class="source-dot"></i> OpenAlex · no paper API key needed</span>
+          </div>
           <form id="discover-form" class="command-form">
-            <div class="input-wrap"><span class="input-icon">⌕</span><input id="topic" name="topic" value="agent memory" placeholder="Search a topic, field, method, or question" required /></div>
-            <select id="limit" name="limit" aria-label="Number of papers"><option value="6">6 papers</option><option value="8" selected>8 papers</option><option value="12">12 papers</option></select>
+            <div class="input-wrap">
+              <span class="input-icon">⌕</span>
+              <input id="topic" name="topic" value="agent memory" placeholder="Search a topic, field, method, or question" required />
+            </div>
+            <select id="limit" name="limit" aria-label="Number of papers">
+              <option value="6">6 papers</option>
+              <option value="8" selected>8 papers</option>
+              <option value="12">12 papers</option>
+            </select>
             <button class="button button-green" type="submit">Build graph <span>↗</span></button>
           </form>
-          <div class="suggestions"><span>TRY A TOPIC</span><button type="button" data-topic="agent memory">agent memory</button><button type="button" data-topic="retrieval augmented generation">retrieval augmented generation</button><button type="button" data-topic="multi-agent systems">multi-agent systems</button><button type="button" data-topic="graph neural networks">graph neural networks</button></div>
+          <div class="suggestions">
+            <span>TRY A TOPIC</span>
+            <button type="button" data-topic="agent memory">agent memory</button>
+            <button type="button" data-topic="retrieval augmented generation">retrieval augmented generation</button>
+            <button type="button" data-topic="multi-agent systems">multi-agent systems</button>
+            <button type="button" data-topic="graph neural networks">graph neural networks</button>
+          </div>
+          <div class="saved-topics-bar" id="saved-topics-bar" hidden>
+            <div class="saved-topics-head">
+              <span class="saved-topics-label">SAVED TOPIC SEARCHES (LOCAL)</span>
+              <button type="button" class="clear-history-btn" id="clear-history-btn" title="Clear saved topic searches">Clear saved</button>
+            </div>
+            <div class="saved-topics-chips" id="saved-topics-chips"></div>
+          </div>
           <p class="message" id="discover-message"></p>
         </section>
 
@@ -55,12 +90,67 @@
 
         <section class="graph-layout">
           <div class="panel graph-card">
-            <div class="panel-heading graph-heading"><div><p class="eyebrow">KNOWLEDGE GRAPH / 02</p><h2>Follow the connections</h2></div><div class="graph-tools"><select id="graph-filter" aria-label="Filter graph nodes"><option value="all">All node types</option><option value="Paper">Papers only</option><option value="Author">Authors</option><option value="Concept">Concepts</option><option value="Method">Methods</option><option value="Limitation">Limitations</option></select><button class="icon-button" id="refresh-graph" title="Refresh graph">↻</button></div></div>
-            <div class="graph-meta"><span id="graph-count">0 nodes · 0 relations</span><span class="graph-tip">Click a node to inspect · use Expand to go one hop deeper</span></div>
-            <div class="graph-stage" id="graph-stage"><svg id="graph-svg" viewBox="0 0 1000 570" role="img" aria-label="Interactive research knowledge graph"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#b8c7bf"></path></marker></defs><g id="graph-edges"></g><g id="graph-nodes"></g></svg><div class="graph-empty" id="graph-empty"><span class="empty-icon">⌁</span><b>Your graph is waiting</b><span>Discover papers above to map the field.</span></div></div>
-            <div class="graph-legend"><span><i class="legend-dot paper"></i>Paper</span><span><i class="legend-dot author"></i>Author</span><span><i class="legend-dot concept"></i>Concept</span><span><i class="legend-dot method"></i>Method</span><span><i class="legend-dot limitation"></i>Limitation</span><span><i class="legend-line"></i>Relationship</span></div>
+            <div class="panel-heading graph-heading">
+              <div>
+                <p class="eyebrow">KNOWLEDGE GRAPH / 02</p>
+                <h2>Follow the connections</h2>
+              </div>
+              <div class="graph-tools">
+                <select id="graph-filter" aria-label="Filter graph nodes">
+                  <option value="all">All node types</option>
+                  <option value="Paper">Papers only</option>
+                  <option value="Author">Authors</option>
+                  <option value="Concept">Concepts</option>
+                  <option value="Method">Methods</option>
+                  <option value="Limitation">Limitations</option>
+                </select>
+                <button class="icon-button" id="refresh-graph" title="Refresh graph">↻</button>
+              </div>
+            </div>
+            <div class="graph-meta">
+              <span id="graph-count">0 nodes · 0 relations</span>
+              <span class="graph-tip">Click a node to inspect · use Expand to go one hop deeper</span>
+            </div>
+            <div class="graph-stage" id="graph-stage">
+              <svg id="graph-svg" viewBox="0 0 1000 570" role="img" aria-label="Interactive research knowledge graph">
+                <defs>
+                  <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                    <path d="M0,0 L8,4 L0,8 z" fill="#b8c7bf"></path>
+                  </marker>
+                </defs>
+                <g id="graph-edges"></g>
+                <g id="graph-nodes"></g>
+              </svg>
+              <div class="graph-empty" id="graph-empty">
+                <span class="empty-icon">⌁</span>
+                <b>Your graph is waiting</b>
+                <span>Discover papers above to map the field.</span>
+              </div>
+            </div>
+            <div class="graph-legend">
+              <span><i class="legend-dot paper"></i>Paper</span>
+              <span><i class="legend-dot author"></i>Author</span>
+              <span><i class="legend-dot concept"></i>Concept</span>
+              <span><i class="legend-dot method"></i>Method</span>
+              <span><i class="legend-dot limitation"></i>Limitation</span>
+              <span><i class="legend-line"></i>Relationship</span>
+            </div>
           </div>
-          <aside class="panel inspector-card" id="inspector"><div class="inspector-empty"><span class="inspector-symbol">◌</span><p class="eyebrow">NODE INSPECTOR</p><h3>Select a node</h3><p>Explore a paper, author, method, or limitation to reveal its connected evidence.</p></div></aside>
+          <aside class="panel inspector-card" id="inspector">
+            <div class="inspector-default" id="inspector-default">
+              <div class="inspector-default-head">
+                <span class="inspector-symbol">◌</span>
+                <p class="eyebrow">GRAPH NAVIGATOR & INSPECTOR</p>
+                <h3>Select a node or paper</h3>
+                <p>Click any node in the graph, or jump directly to one of the loaded papers below.</p>
+              </div>
+              <div class="inspector-hub-header">
+                <span class="inspector-section-label">LOADED PAPERS IN GRAPH</span>
+              </div>
+              <div class="inspector-quick-list" id="inspector-quick-list"></div>
+            </div>
+            <div class="inspector-content" id="inspector-content" hidden></div>
+          </aside>
         </section>
 
         <section class="paper-studio panel" id="paper-studio">
@@ -175,6 +265,7 @@
             </div>
           </div>
           <div class="comparison-papers-row" id="comparison-papers-row"></div>
+          <div class="comparison-summary-banner" id="comparison-summary-banner"></div>
           <div class="comparison-markdown-view" id="comparison-markdown-view"></div>
         </section>
 
@@ -186,6 +277,12 @@
                 <h2>Turn connections into insight</h2>
               </div>
               <span class="answer-badge">CITED ANSWERS</span>
+            </div>
+            <div class="question-templates">
+              <span>RESEARCH PROMPTS:</span>
+              <button type="button" class="template-pill" data-prompt="Which approaches to agent memory have been explored, what are their limitations, and which papers discuss related solutions?">Approaches & Limitations</button>
+              <button type="button" class="template-pill" data-prompt="Compare the evaluation datasets, benchmark performance, and empirical results reported across the papers.">Empirical Evaluation</button>
+              <button type="button" class="template-pill" data-prompt="What are the key architectural bottlenecks and open problems identified for future work?">Open Bottlenecks</button>
             </div>
             <form id="ask-form">
               <div class="question-wrap">
@@ -208,6 +305,10 @@
                 <h2>Recently discovered</h2>
               </div>
               <span class="collection-count" id="collection-count">0</span>
+            </div>
+            <div class="paper-search-wrap">
+              <span class="input-icon">⌕</span>
+              <input id="paper-filter-input" placeholder="Search title, author, keyword…" />
             </div>
             <div class="compare-toolbar">
               <span id="compare-selection-count">0 of 4 papers selected</span>

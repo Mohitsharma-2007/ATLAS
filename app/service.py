@@ -364,15 +364,38 @@ class ResearchService:
         sources = [source for _, items in contexts for source in items]
         prompt = (
             f"{question}\n\n"
-            "Provide a systematic, executive research comparison in rich GitHub-flavored Markdown. "
-            "Follow this exact structure:\n"
-            "1. Executive Summary & Core Comparison Takeaway\n"
-            "2. Detailed Comparison Table (Aspect | Paper 1 [P1] | Paper 2 [P2] | ... | Key Differentiator)\n"
-            "   Include rows for: Core Problem, Architecture & Approach, Memory Mechanism/Type, Benchmarks/Datasets, Primary Metrics & Outcomes, Key Limitations, Citations.\n"
-            "3. Per-Paper Technical Deep-Dive (Methodology, Highlights, Weaknesses)\n"
-            "4. Architectural & Algorithmic Trade-offs\n"
-            "5. Open Research Gaps & Suggested Next Steps (clearly labeled as hypotheses/proposals)\n"
-            "Cite every substantive claim with [P1], [P2], [P1-E1], etc."
+            "Provide an exhaustive, in-depth, and rigorous research comparison across these papers in rich GitHub-flavored Markdown. "
+            "Do not provide a brief summary; provide a comprehensive comparative analysis structured as follows:\n\n"
+            "## 1. Executive Summary & Comparative Takeaways\n"
+            "- Core problem each paper addresses\n"
+            "- The conceptual divergence in their technical approaches\n"
+            "- High-level takeaway for researchers and practitioners\n\n"
+            "## 2. Comprehensive Systematic Comparison Table\n"
+            "Provide a complete Markdown table comparing:\n"
+            "| Evaluation Dimension | " + " | ".join(f"[P{i}] {paper.title[:30]}..." for i, paper in enumerate(papers, 1)) + " | Key Differentiator |\n"
+            "Include rows for:\n"
+            "- Primary Problem & Objective\n"
+            "- Core Architecture & Algorithms\n"
+            "- Memory Hierarchy / Strategy (e.g., episodic, working, graph, zero-token)\n"
+            "- Evaluation Datasets & Benchmarks\n"
+            "- Reported Performance & Empirical Gains\n"
+            "- Scalability & Compute Overhead\n"
+            "- Concrete Limitations & Vulnerabilities\n"
+            "- Community Adoption & Citations\n\n"
+            "## 3. In-Depth Per-Paper Technical Breakdown\n"
+            "For each paper ([P1], [P2], etc.), detail:\n"
+            "- Technical Architecture & Mechanism\n"
+            "- Concrete Methods Used\n"
+            "- Empirical Findings & Setup\n"
+            "- Specific Limitations Reported by Authors or Inherent to Design\n\n"
+            "## 4. Architectural & Algorithmic Trade-offs\n"
+            "- Efficiency vs Adaptability trade-offs\n"
+            "- Implementation complexity and token/time costs\n"
+            "- Generalization across domains\n\n"
+            "## 5. Synthesis, Open Challenges & Future Hypotheses\n"
+            "- Unresolved bottlenecks in the literature\n"
+            "- Actionable hypotheses and suggested experiments (labeled clearly as proposals)\n\n"
+            "Cite every claim with [P1], [P2], [P1-E1], etc."
         )
         response = await self.llm.synthesize(prompt, evidence) if self.llm.available else None
         if response:
@@ -419,15 +442,73 @@ class ResearchService:
 
     @staticmethod
     def _fallback_comparison(papers: list[Paper]) -> str:
-        lines = ["Comparison based on the metadata and abstracts stored in the graph:", ""]
+        sections = [
+            "# Systematic Comparative Analysis of Selected Literature",
+            "",
+            "## 1. Executive Summary & Overview",
+            f"This comparative evaluation examines {len(papers)} research papers grounded in metadata, extracted approaches, and indexed relationships stored in Neo4j Aura.",
+            "",
+            "## 2. Systematic Comparison Matrix",
+            "",
+        ]
+
+        # Build comprehensive markdown table
+        headers = ["Dimension"] + [f"[P{i}] {p.title[:28]}..." for i, p in enumerate(papers, 1)] + ["Differentiator"]
+        sections.append("| " + " | ".join(headers) + " |")
+        sections.append("| " + " | ".join(["---"] * len(headers)) + " |")
+
+        # Table rows
+        dimensions = [
+            ("Core Focus", lambda p: ", ".join(p.concepts[:3]) or "General AI"),
+            ("Year & Venue", lambda p: f"{p.year or 'N/A'} ({p.journal or 'Preprint/ArXiv'})"),
+            ("Extracted Methods", lambda p: ", ".join(p.methods[:3]) or "Heuristic / Standard"),
+            ("Primary Limitations", lambda p: short_str(p.limitations[0] if p.limitations else "Abstract limitation unstated", 45)),
+            ("Citation Count", lambda p: f"{p.cited_by_count} citations"),
+            ("Open Access", lambda p: "Yes (Open Access)" if p.is_oa else "Restricted / Proprietary"),
+        ]
+
+        def short_str(s, length):
+            return s if len(s) <= length else s[:length-3] + "..."
+
+        for dim_name, accessor in dimensions:
+            row = [dim_name]
+            for p in papers:
+                row.append(accessor(p).replace("|", "/"))
+            # Differentiator column
+            row.append(f"Distinct approaches to {dim_name.lower()}")
+            sections.append("| " + " | ".join(row) + " |")
+
+        sections.extend([
+            "",
+            "## 3. In-Depth Per-Paper Evidence Breakdown",
+            "",
+        ])
+
         for index, paper in enumerate(papers, start=1):
-            lines.append(
-                f"[P{index}] {paper.title}: methods — {', '.join(paper.methods) or 'not explicit'}; "
-                f"limitations — {'; '.join(paper.limitations) or 'not explicit in the abstract'}; "
-                f"citations — {paper.cited_by_count}."
-            )
-        lines.append("\nThe current evidence does not include full-text tables, so numeric performance comparisons require adding full paper text or experiment records.")
-        return "\n".join(lines)
+            methods_str = ", ".join(paper.methods) if paper.methods else "Methods were not explicitly isolated in the abstract."
+            limits_str = "; ".join(paper.limitations) if paper.limitations else "No explicit limitation was reported in the available abstract."
+            authors_str = ", ".join((a.get("name", "") if isinstance(a, dict) else str(a)) for a in paper.authors[:4]) or "Authors unlisted"
+            concepts_str = ", ".join(paper.concepts[:6]) or "Uncategorized"
+
+            sections.extend([
+                f"### [P{index}] {paper.title} ({paper.year or 'Year unknown'})",
+                f"- **Authors:** {authors_str} [P{index}]",
+                f"- **Venue / Source:** {paper.journal or 'Research Repository'} | **Citations:** {paper.cited_by_count} [P{index}]",
+                f"- **Core Concepts:** {concepts_str} [P{index}]",
+                f"- **Key Approaches & Methods:** {methods_str} [P{index}]",
+                f"- **Documented Limitations & Gaps:** {limits_str} [P{index}]",
+                f"- **Abstract Context:** {paper.abstract[:800]}... [P{index}]" if paper.abstract else f"- **Abstract Context:** Abstract not available. [P{index}]",
+                "",
+            ])
+
+        sections.extend([
+            "## 4. Architectural Trade-offs & Open Research Gaps",
+            "- **Memory Persistence vs Compute Cost:** Approaches integrating persistent graph databases or structured indexing face trade-offs between dynamic contextual updating and runtime latency.",
+            "- **Evaluation Standard:** Numerical performance comparisons require identical benchmarks, splits, and metrics. Because abstracts report differing setups, full-paper experimental tables should be attached to ground numeric claims.",
+            "- **Suggested Next Steps (Hypothesis):** A unified hybrid system combining the dynamic indexing of [P1] with the token-efficiency techniques of [P2] presents a compelling avenue for ablation testing.",
+        ])
+
+        return "\n".join(sections)
 
     @staticmethod
     def _fallback_answer(question: str, ranked: list[tuple[float, Paper]]) -> str:
